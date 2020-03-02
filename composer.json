@@ -1,0 +1,19 @@
+{
+    "name": "kulcsarmate/CHNY_backend2",
+    "authors": [
+        {
+            "name": "Kulcsar Mate",
+            "email": "kulcsarmate@gmail.com"
+        }
+    ],
+    "require": {
+        "illuminate/database": "^5.8",
+        "phpmailer/phpmailer": "^6.1",
+        "tecnick.com/tcpdf": "^6.3"
+    },
+    "autoload": {
+        "classmap": [
+            "app/models"
+        ]
+    }
+}
