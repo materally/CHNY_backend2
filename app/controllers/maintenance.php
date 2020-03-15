@@ -5,6 +5,8 @@ header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Conte
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json; charset=UTF-8");
 
+include("clients.php");
+
 class Maintenance extends KM_Controller {
     public function index($list_id = 0)
     {
@@ -67,9 +69,10 @@ class Maintenance extends KM_Controller {
                     $maintenance->megjegyzes = $megjegyzes;
                     $maintenance->save();
                     if($maintenance){
-                        $kovetkezo_karbantartas = new DateTime($datum);
+                        /* $kovetkezo_karbantartas = new DateTime($datum);
                         $kovetkezo_karbantartas->modify('+6 months');
-                        $kovetkezo_karbantartas->format('Y-m-d');
+                        $kovetkezo_karbantartas->format('Y-m-d'); */
+                        $kovetkezo_karbantartas = Clients::calcKovKarbantartas($datum);
                         $hutokamra = ClientsModel::where('client_id', $client_id)->first();
                         $hutokamra->utolso_karbantartas = $datum;
                         $hutokamra->kovetkezo_karbantartas = $kovetkezo_karbantartas;
@@ -146,9 +149,10 @@ class Maintenance extends KM_Controller {
                 $m->client_id = $value['client_id'];
                 $m->datum = $datum;
                 $m->save();
-                $kovetkezo_karbantartas = new DateTime($datum);
+                /* $kovetkezo_karbantartas = new DateTime($datum);
                 $kovetkezo_karbantartas->modify('+6 months');
-                $kovetkezo_karbantartas->format('Y-m-d');
+                $kovetkezo_karbantartas->format('Y-m-d'); */
+                $kovetkezo_karbantartas = Clients::calcKovKarbantartas($datum);
                 $hutokamra = ClientsModel::where('client_id', $value['client_id'])->first();
                 $hutokamra->utolso_karbantartas = $datum;
                 $hutokamra->kovetkezo_karbantartas = $kovetkezo_karbantartas;
@@ -217,7 +221,7 @@ class Maintenance extends KM_Controller {
             $html3 .= '<th style="text-align:center; border: 1px solid #d1d1d1">Cégnév</th>';
             $html3 .= '<th style="text-align:center; border: 1px solid #d1d1d1">Kapcsolattartó</th>';
             $html3 .= '<th style="text-align:center; border: 1px solid #d1d1d1">Kamra címe</th>';
-            $html3 .= '<th style="text-align:center; border: 1px solid #d1d1d1">Kamra koordinátái</th>';
+            $html3 .= '<th style="text-align:center; border: 1px solid #d1d1d1">GPS koordináták</th>';
         $html3 .= '</tr></thead><tbody style="">';
 
         $i = 1;

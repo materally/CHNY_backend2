@@ -12,12 +12,31 @@ class Clients extends KM_Controller {
             // get user(s)
             if(empty($client_id) OR $client_id === 0){
                 // get all users
-                $client = ClientsModel::with('ClientMaintenances')->orderBy('utolso_karbantartas', 'asc')->get();
+                $client = ClientsModel::with('ClientMaintenances')->orderBy('cegnev', 'asc')->get();
             }else{
                 $client = ClientsModel::with('ClientMaintenances')->find($client_id);
             }
             http_response_code(200);
             echo json_encode($client);
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function delete()
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            $client_id = $_POST['client_id'];
+            ClientsModel::where('client_id', $client_id)->first()->delete();
+
+            $m = MaintenanceModel::where('client_id', $client_id)->first();
+            if($m){
+                MaintenanceModel::where('client_id', $client_id)->delete();
+            }
+            
+            http_response_code(200);
+            echo json_encode(['success' => 'Sikeres törlés!']);
         }else{
             http_response_code(405);
             echo json_encode(['error' => 'Bad request']);
@@ -55,9 +74,10 @@ class Clients extends KM_Controller {
                 $client->save();
                 if($client){
                     if($utolso_karbantartas !== NULL){
-                        $kovetkezo_karbantartas = new DateTime($utolso_karbantartas);
+                       /*  $kovetkezo_karbantartas = new DateTime($utolso_karbantartas);
                         $kovetkezo_karbantartas->modify('+6 months');
-                        $kovetkezo_karbantartas->format('Y-m-d');
+                        $kovetkezo_karbantartas->format('Y-m-d'); */
+                        $kovetkezo_karbantartas = $this->calcKovKarbantartas($utolso_karbantartas);
                         $hutokamra = ClientsModel::where('client_id', $client->client_id)->first();
                         $hutokamra->kovetkezo_karbantartas = $kovetkezo_karbantartas;
                         $hutokamra->save();
@@ -161,6 +181,27 @@ class Clients extends KM_Controller {
         }
         http_response_code(200);
         echo json_encode($return);
+    }
+
+    public function calcKovKarbantartas($datum)
+    {
+        $utolso_karbantartas = new DateTime($datum);
+        $uk_year    = $utolso_karbantartas->format('Y');
+        $uk_month   = $utolso_karbantartas->format('m');
+        $uk_day     = $utolso_karbantartas->format('d');
+
+        $for_Szeptember = array('01', '02', '03', '04', '05', '06', '07');
+        $for_April      = array('08', '09', '10', '11', '12');
+
+        $nextYear = $utolso_karbantartas->add(new DateInterval('P1Y'))->format('Y');
+        
+        if(in_array($uk_month, $for_Szeptember)){
+            $kovetkezo_karbantartas = date("Y").'-09-01';
+        }else{
+            $kovetkezo_karbantartas = $nextYear.'-04-01';
+        }
+
+        return $kovetkezo_karbantartas;
     }
 
 }
