@@ -26,7 +26,7 @@ class Maintenance extends KM_Controller {
         }
     }
 
-    public function update($maintenance_id)
+    /* public function update($maintenance_id)
     {
         if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
             if($maintenance_id > 0 AND isset($maintenance_id)){
@@ -51,7 +51,7 @@ class Maintenance extends KM_Controller {
             http_response_code(405);
             echo json_encode(['error' => 'Bad request']);
         }
-    }
+    } */
 
     public function create($client_id)
     {
@@ -144,14 +144,15 @@ class Maintenance extends KM_Controller {
 
             // create maintenance
             foreach ($list as $key => $value){
-                $m = new MaintenanceModel;
+                /* $m = new MaintenanceModel;
                 $m->list_id = $list_id;
                 $m->client_id = $value['client_id'];
                 $m->datum = $datum;
+                $m->save(); */
+                $m = MaintenanceModel::where('client_id', $value['client_id'])->first();
+                $m->list_id = $list_id;
                 $m->save();
-                /* $kovetkezo_karbantartas = new DateTime($datum);
-                $kovetkezo_karbantartas->modify('+6 months');
-                $kovetkezo_karbantartas->format('Y-m-d'); */
+                
                 $kovetkezo_karbantartas = Clients::calcKovKarbantartas($datum);
                 $hutokamra = ClientsModel::where('client_id', $value['client_id'])->first();
                 $hutokamra->utolso_karbantartas = $datum;
@@ -239,7 +240,7 @@ class Maintenance extends KM_Controller {
         $html3 .= '</tbody></table>';
         $pdf->writeHTMLCell(0, 0, '', '', $html3, 0, 1, 0, true, '', true);
 
-        $filename = 'charliehuto_'.$list['list_id'].'_'.$list['datum'];
+        $filename = 'charliehuto_'.$list['list_id'].'_'.$list['datum'].'_'.rand(0,999999999);
         
         ob_end_clean();
         $pdf->Output(getcwd().'/pdf/'.$filename.'.pdf', 'F');
@@ -251,6 +252,217 @@ class Maintenance extends KM_Controller {
             'file' => $filename.'.pdf'
         ];
         return $return;
+    }
+
+    public function checked($maintenance_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($maintenance_id > 0 AND isset($maintenance_id)){
+                $maintenance = MaintenanceModel::where('maintenance_id', $maintenance_id)->first();
+                $maintenance->elvegezve_datum = date("Y-m-d");
+                $maintenance->elvegezve = 1;
+                $maintenance->save();
+                $n = new MaintenanceModel;
+                $n->list_id = -1;
+                $n->client_id = $maintenance->client_id;
+                $n->datum = Clients::calcKovKarbantartas(date("Y-m-d"));
+                $n->save();
+                $c = ClientsModel::where('client_id', $maintenance->client_id)->first();
+                $c->kovetkezo_karbantartas = Clients::calcKovKarbantartas(date("Y-m-d"));
+                $c->utolso_karbantartas = date("Y-m-d");
+                $c->save();
+                if($maintenance){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítás!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function deletefromlist($maintenance_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($maintenance_id > 0 AND isset($maintenance_id)){
+                $old = $_POST['list_id'];
+                $maintenance = MaintenanceModel::where('maintenance_id', $maintenance_id)->first();
+                $maintenance->list_id = -1;
+                $maintenance->save();
+                // pdf edit
+                $createpdf = $this->createPDF($old);
+                $topdf = MaintenanceListModel::where('list_id', $old)->first();
+                $topdf->pdf = $createpdf['url'];
+                $topdf->save();
+
+                if($maintenance){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítás!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function updateMunkatars($list_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($list_id > 0 AND isset($list_id)){
+                $l = MaintenanceListModel::where('list_id', $list_id)->first();
+                $l->munkatars = $_POST['munkatars'];
+                $l->save();
+                // pdf edit
+                $createpdf = $this->createPDF($list_id);
+                $topdf = MaintenanceListModel::where('list_id', $list_id)->first();
+                $topdf->pdf = $createpdf['url'];
+                $topdf->save();
+
+                if($l){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítást!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function updateBelso($list_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($list_id > 0 AND isset($list_id)){
+                $l = MaintenanceListModel::where('list_id', $list_id)->first();
+                $l->megjegyzes = $_POST['megjegyzes'];
+                $l->save();
+                if($l){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítást!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function updateMegjegyzesMunkatars($list_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($list_id > 0 AND isset($list_id)){
+                $l = MaintenanceListModel::where('list_id', $list_id)->first();
+                $l->megjegyzes_munkatars = $_POST['megjegyzes_munkatars'];
+                $l->save();
+
+                // pdf edit
+                $createpdf = $this->createPDF($list_id);
+                $topdf = MaintenanceListModel::where('list_id', $list_id)->first();
+                $topdf->pdf = $createpdf['url'];
+                $topdf->save();
+                
+                if($l){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítást!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function addToList($list_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($list_id > 0 AND isset($list_id)){
+                $m = MaintenanceModel::where('client_id', $_POST['client_id'])->first();
+                $m->list_id = $list_id;
+                $m->save();
+                // pdf edit
+                $createpdf = $this->createPDF($m->list_id);
+                $topdf = MaintenanceListModel::where('list_id', $m->list_id)->first();
+                $topdf->pdf = $createpdf['url'];
+                $topdf->save();
+
+                if($m){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítást!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
+    }
+
+    public function updateMap($list_id)
+    {
+        if($_SERVER['REQUEST_METHOD'] == 'POST' AND $_POST['API_SECRET'] == API_SECRET){
+            if($list_id > 0 AND isset($list_id)){
+                $l = MaintenanceListModel::where('list_id', $list_id)->first();
+                $l->utvonal = $_POST['utvonal'];
+                $l->save();
+                if($l){
+                    http_response_code(200);
+                    echo json_encode(['success' => 'Sikeres módosítást!']);
+                }else{
+                    http_response_code(200);
+                    echo json_encode(['error' => 'A módosítás nem sikerült!']);
+                }
+            }else{
+                http_response_code(200);
+                echo json_encode(['error' => 'Hiányzó paraméter!']);
+            }
+            
+        }else{
+            http_response_code(405);
+            echo json_encode(['error' => 'Bad request']);
+        }
     }
 
 }

@@ -74,13 +74,15 @@ class Clients extends KM_Controller {
                 $client->save();
                 if($client){
                     if($utolso_karbantartas !== NULL){
-                       /*  $kovetkezo_karbantartas = new DateTime($utolso_karbantartas);
-                        $kovetkezo_karbantartas->modify('+6 months');
-                        $kovetkezo_karbantartas->format('Y-m-d'); */
                         $kovetkezo_karbantartas = $this->calcKovKarbantartas($utolso_karbantartas);
                         $hutokamra = ClientsModel::where('client_id', $client->client_id)->first();
                         $hutokamra->kovetkezo_karbantartas = $kovetkezo_karbantartas;
                         $hutokamra->save();
+                        $m1 = new MaintenanceModel;
+                        $m1->list_id = -1;
+                        $m1->client_id = $client->client_id;
+                        $m1->datum = $utolso_karbantartas;
+                        $m1->save();
                     }
                     http_response_code(200);
                     echo json_encode(['success' => 'Az ügyfél létrehozva!', 'client_id' => $client->client_id]);
@@ -163,20 +165,25 @@ class Clients extends KM_Controller {
     public function getMarkersForMap()
     {
         $return = array();
-        $clients = ClientsModel::all();
+        $clients = ClientsModel::with('ClientMaintenances')->get();
         foreach ($clients as $value) {
             if($value['kamra_latitude']){
-                $kovetkezo_karbantartas = new \DateTime($value['kovetkezo_karbantartas']);
-                $now = new \DateTime();
-                if($kovetkezo_karbantartas->diff($now)->days > 30) {
-                    $fill = '#006009';
+                $json = json_decode($value, true);
+                $datum = $json['client_maintenances'][0]['datum'];
+                $elvegezve = $json['client_maintenances'][0]['elvegezve'];
+               
+                $kovetkezo_karbantartas = date($datum);
+                $now_30 = date('Y-m-d', strtotime(date("Y-m-d"). ' +30 days'));
+
+                if($kovetkezo_karbantartas < $now_30 AND $elvegezve === 0) {
+                    $fill = '#ad9900'; // zöld
                 }else{
-                    $fill = '#d00';
+                    $fill = '#E80D8A';
                 }
                 $return[] = [
                     'data' => $value,
                     'fill' => $fill
-                ];
+                ]; 
             }
         }
         http_response_code(200);

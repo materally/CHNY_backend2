@@ -6,7 +6,7 @@ class MaintenanceModel extends Eloquent {
     protected $table = 'maintenance';
     protected $primaryKey = 'maintenance_id';
     public $timestamps = false;
-    protected $fillable = ['list_id', 'client_id', 'datum'];
+    protected $fillable = ['list_id', 'client_id', 'datum', 'elvegezve_datum', 'elvegezve'];
 
     public function Client()
     {

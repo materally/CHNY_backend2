@@ -10,7 +10,7 @@ class ClientsModel extends Eloquent {
 
     public function ClientMaintenances()
     {
-        return $this->hasMany('MaintenanceModel', 'client_id')->with('ListInfo')->orderBy('datum', 'desc');
+        return $this->hasMany('MaintenanceModel', 'client_id')->with('ListInfo')->orderBy('maintenance_id', 'desc');
     }
 
 }
