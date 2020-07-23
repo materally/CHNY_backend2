@@ -168,21 +168,39 @@ class Clients extends KM_Controller {
         $clients = ClientsModel::with('ClientMaintenances')->get();
         foreach ($clients as $value) {
             if($value['kamra_latitude']){
+                
+                $count = MaintenanceModel::where('client_id', $value['client_id'])->count();
+                if($count === 1){
+                    $uk = MaintenanceModel::where('client_id', $value['client_id'])->orderBy('maintenance_id', 'desc')->first();
+                }else{
+                    $uk = MaintenanceModel::where('client_id', $value['client_id'])->orderBy('maintenance_id', 'desc')->skip(1)->take(1)->first();
+                }
+
+                $kov = $this->calcKovKarbantartas($uk['datum']);
+
                 $json = json_decode($value, true);
                 $datum = $json['client_maintenances'][0]['datum'];
                 $elvegezve = $json['client_maintenances'][0]['elvegezve'];
                
-                $kovetkezo_karbantartas = date($datum);
-                $now_30 = date('Y-m-d', strtotime(date("Y-m-d"). ' +30 days'));
+                $now = date('Y-m-d');
 
-                if($kovetkezo_karbantartas < $now_30 AND $elvegezve === 0) {
+                if($now <= $kov) {
                     $fill = '#ad9900'; // zöld
                 }else{
-                    $fill = '#E80D8A';
+                    // ha túlléptük, de még nincs elvégezve
+                    if($elvegezve === 0){
+                        $fill = '#E80D8A';
+                    }else{
+                        // ha túlléptük, és már el is van végezve
+                        $fill = '#ad9900'; // zöld
+                    }
                 }
                 $return[] = [
                     'data' => $value,
-                    'fill' => $fill
+                    'kovetkezo_karbantartas' => $kov,
+                    'utolso_karbantartas' => $uk,
+                    'fill' => $fill,
+                    'original_fill' => $fill,
                 ]; 
             }
         }
@@ -190,22 +208,36 @@ class Clients extends KM_Controller {
         echo json_encode($return);
     }
 
-    public function calcKovKarbantartas($datum)
+    public static function calcKovKarbantartas($datum)
     {
         $utolso_karbantartas = new DateTime($datum);
         $uk_year    = $utolso_karbantartas->format('Y');
         $uk_month   = $utolso_karbantartas->format('m');
         $uk_day     = $utolso_karbantartas->format('d');
 
-        $for_Szeptember = array('01', '02', '03', '04', '05', '06', '07');
-        $for_April      = array('08', '09', '10', '11', '12');
+        $for_Oktober   = array('01', '02', '03', '04', '05', '06', '07');
+        $for_Aprilis   = array('08', '09', '10', '11', '12');
 
-        $nextYear = $utolso_karbantartas->add(new DateInterval('P1Y'))->format('Y');
-        
-        if(in_array($uk_month, $for_Szeptember)){
-            $kovetkezo_karbantartas = date("Y").'-09-01';
-        }else{
-            $kovetkezo_karbantartas = $nextYear.'-04-01';
+        // idei év októberre
+        if(in_array($uk_month, $for_Oktober) && $uk_year === date("Y")){
+            $kovetkezo_karbantartas = date("Y").'-10-01';
+        }
+
+        // következő év, október után
+        if(in_array($uk_month, $for_Aprilis) && $uk_year === date("Y")){
+            $newy = date("Y")+1;
+            $kovetkezo_karbantartas = $newy.'-04-01';
+        }
+
+        // előző évek októberre
+        if(in_array($uk_month, $for_Oktober) && $uk_year < date("Y")){
+            $kovetkezo_karbantartas = $uk_year.'-10-01';
+        }
+
+        // következő év, október után
+        if(in_array($uk_month, $for_Aprilis) && $uk_year < date("Y")){
+            $newy = $uk_year+1;
+            $kovetkezo_karbantartas = $newy.'-04-01';
         }
 
         return $kovetkezo_karbantartas;
